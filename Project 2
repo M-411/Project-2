@@ -1,0 +1,59 @@
+localDir <- "data"
+if (!file.exists(localDir)) {
+  dir.create(localDir)
+}
+
+url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+file <- paste(localDir,basename(url),sep='/')
+if (!file.exists(file)) {
+  download.file(url, file)
+}
+
+storm_data <- read.csv(file, as.is = TRUE)
+
+library(knitr)
+downloaded_files <- as.data.frame(list.files(localDir))
+names(downloaded_files) <- 'Files'
+kable(downloaded_files)
+str(storm_data)
+library(dplyr)
+library(lubridate)
+storm_data$YEAR <- year(as.Date(storm_data$BGN_DATE, '%m/%d/%Y'))
+hist(storm_data$YEAR, 62)
+library(sqldf)
+sql <- "
+  select
+    EVTYPE as Event,
+    sum(FATALITIES) as Fatalities,
+    sum(INJURIES) as Injuries
+  from
+    storm_data
+  where
+    YEAR >= 2000
+  group by
+    EVTYPE
+  order by
+    sum(FATALITIES) desc,
+    sum(INJURIES) desc
+"
+tbl_ds <-sqldf::sqldf(sql)
+library(knitr)
+knitr::kable(tbl_ds[1:10,])
+library(sqldf)
+sql <- "
+  select
+    EVTYPE as Event,
+    sum(PROPDMG)
+  from
+    storm_data
+  where
+    YEAR >= 2000
+  group by
+    EVTYPE
+  order by
+    sum(PROPDMG) desc
+"
+tbl_ds <-sqldf(sql)
+names(tbl_ds) <- c('Event', 'Property Damage')
+library(knitr)
+knitr::kable(tbl_ds[1:10,])
